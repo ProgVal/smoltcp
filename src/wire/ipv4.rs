@@ -110,8 +110,8 @@ impl fmt::Display for Address {
 /// subnet masking prefix length.
 #[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Default)]
 pub struct Cidr {
-    address:    Address,
-    prefix_len: u8,
+    pub(crate) address:    Address,
+    pub(crate) prefix_len: u8,
 }
 
 impl Cidr {

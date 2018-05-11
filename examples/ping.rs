@@ -17,7 +17,7 @@ use smoltcp::phy::wait as phy_wait;
 use smoltcp::wire::{EthernetAddress, IpAddress, IpCidr,
                     Ipv6Address, Icmpv6Repr, Icmpv6Packet,
                     Ipv4Address, Icmpv4Repr, Icmpv4Packet};
-use smoltcp::iface::{NeighborCache, EthernetInterfaceBuilder};
+use smoltcp::iface::{NeighborCache, EthernetInterfaceBuilder, Route, Routes};
 use smoltcp::socket::{SocketSet, IcmpSocket, IcmpSocketBuffer, IcmpPacketMetadata, IcmpEndpoint};
 use std::collections::HashMap;
 use byteorder::{ByteOrder, NetworkEndian};
@@ -99,11 +99,12 @@ fn main() {
                     IpCidr::new(IpAddress::v6(0xfe80, 0, 0, 0, 0, 0, 0, 1), 64)];
     let default_v4_gw = Ipv4Address::new(192, 168, 69, 100);
     let default_v6_gw = Ipv6Address::new(0xfe80, 0, 0, 0, 0, 0, 0, 0x100);
+    let routes = [Route::new_ipv4_gateway(default_v4_gw),
+                  Route::new_ipv6_gateway(default_v6_gw)];
     let mut iface = EthernetInterfaceBuilder::new(device)
             .ethernet_addr(ethernet_addr)
             .ip_addrs(ip_addrs)
-            .ipv4_gateway(default_v4_gw)
-            .ipv6_gateway(default_v6_gw)
+            .routes(Routes::new(routes))
             .neighbor_cache(neighbor_cache)
             .finalize();
 
