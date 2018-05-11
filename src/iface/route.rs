@@ -71,9 +71,7 @@ impl<'a> Routes<'a> {
     pub fn new<T>(storage: T) -> Routes<'a>
             where T: Into<ManagedSlice<'a, Route>> {
         let storage = storage.into();
-        let r = Routes { storage };
-        r.check_ip_addrs();
-        r
+        Routes { storage }
     }
 
     /// Update the routes of this node.
@@ -82,7 +80,6 @@ impl<'a> Routes<'a> {
     /// This function panics if any of the addresses are not unicast.
     pub fn update_routes<F: FnOnce(&mut ManagedSlice<'a, Route>)>(&mut self, f: F) {
         f(&mut self.storage);
-        self.check_ip_addrs();
     }
 
     pub(crate) fn lookup(&self, addr: &IpAddress, timestamp: Instant) ->
@@ -111,14 +108,6 @@ impl<'a> Routes<'a> {
         }
 
         current_address
-    }
-
-    fn check_ip_addrs(&self) {
-        for &Route { prefix, .. } in self.storage.iter() {
-            if !prefix.address().is_unicast() {
-                panic!("IP address {} is not unicast", prefix.address())
-            }
-        }
     }
 }
 
