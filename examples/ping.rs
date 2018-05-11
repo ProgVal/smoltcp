@@ -23,8 +23,8 @@ use std::collections::HashMap;
 use byteorder::{ByteOrder, NetworkEndian};
 
 macro_rules! send_icmp_ping {
-    ( $repr_type:ident, $packet_type:ident, $ident:expr, $seq_no:expr, $echo_payload:expr,
-      $socket:expr, $remote_addr:expr, $device_caps:expr ) => {{
+    ( $repr_type:ident, $packet_type:ident, $ident:expr, $seq_no:expr,
+      $echo_payload:expr, $socket:expr, $remote_addr:expr ) => {{
         let icmp_repr = $repr_type::EchoRequest {
             ident: $ident,
             seq_no: $seq_no,
@@ -42,7 +42,7 @@ macro_rules! send_icmp_ping {
 
 macro_rules! get_icmp_pong {
     ( $repr_type:ident, $repr:expr, $payload:expr, $waiting_queue:expr, $remote_addr:expr,
-      $timestamp:expr, $received:expr) => {{
+      $timestamp:expr, $received:expr ) => {{
         if let $repr_type::EchoReply { seq_no, data, .. } = $repr {
             if let Some(_) = $waiting_queue.get(&seq_no) {
                 let packet_timestamp_ms = NetworkEndian::read_i64(data);
@@ -136,13 +136,13 @@ fn main() {
                     IpAddress::Ipv4(_) => {
                         let (icmp_repr, mut icmp_packet) = send_icmp_ping!(
                                 Icmpv4Repr, Icmpv4Packet, ident, seq_no,
-                                echo_payload, socket, remote_addr, device_caps);
+                                echo_payload, socket, remote_addr);
                         icmp_repr.emit(&mut icmp_packet, &device_caps.checksum);
                     },
                     IpAddress::Ipv6(_) => {
                         let (icmp_repr, mut icmp_packet) = send_icmp_ping!(
                                 Icmpv6Repr, Icmpv6Packet, ident, seq_no,
-                                echo_payload, socket, remote_addr, device_caps);
+                                echo_payload, socket, remote_addr);
                         icmp_repr.emit(&src_ipv6, &remote_addr,
                                        &mut icmp_packet, &device_caps.checksum);
                     },
