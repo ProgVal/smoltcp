@@ -279,6 +279,14 @@ impl<'b, 'c, 'e, DeviceT> Interface<'b, 'c, 'e, DeviceT>
         self.inner.has_ip_addr(addr)
     }
 
+    pub fn routes(&self) -> &'e Routes {
+        &self.inner.routes
+    }
+
+    pub fn routes_mut(&mut self) -> &'e mut Routes {
+        &mut self.inner.routes
+    }
+
     /// Transmit packets queued in the given sockets, and receive packets queued
     /// in the device.
     ///
