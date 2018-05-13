@@ -204,7 +204,9 @@ impl<T: AsRef<[u8]>> NdiscOption<T> {
         Type::from(data[field::TYPE])
     }
 
-    /// Return the length of the data.
+    /// Return the length of the data, **in units of 8 octets**.
+    ///
+    /// https://tools.ietf.org/html/rfc4861#section-4.6
     #[inline]
     pub fn data_len(&self) -> u8 {
         let data = self.buffer.as_ref();
@@ -423,7 +425,7 @@ pub enum Repr<'a> {
 
 impl<'a> Repr<'a> {
     /// Parse an NDISC Option and return a high-level representation.
-    pub fn parse<T>(opt: &'a NdiscOption<&'a T>) -> Result<Repr<'a>>
+    pub fn parse<T>(opt: &NdiscOption<&'a T>) -> Result<Repr<'a>>
             where T: AsRef<[u8]> + ?Sized {
         match opt.option_type() {
             Type::SourceLinkLayerAddr => {

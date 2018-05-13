@@ -23,7 +23,7 @@ use wire::{Icmpv6Packet, Icmpv6Repr, Icmpv6ParamProblem};
 #[cfg(all(feature = "socket-icmp", any(feature = "proto-ipv4", feature = "proto-ipv6")))]
 use wire::IcmpRepr;
 #[cfg(feature = "proto-ipv6")]
-use wire::{NdiscNeighborFlags, NdiscRepr};
+use wire::{NdiscNeighborFlags, NdiscRepr, NdiscOptionRepr, NdiscOptionsRepr};
 #[cfg(all(feature = "proto-ipv6", feature = "socket-udp"))]
 use wire::Icmpv6DstUnreachable;
 #[cfg(feature = "socket-udp")]
@@ -785,9 +785,9 @@ impl<'b, 'c, 'e> InterfaceInner<'b, 'c, 'e> {
     fn process_ndisc<'frame>(&mut self, timestamp: Instant, ip_repr: Ipv6Repr,
                              repr: NdiscRepr<'frame>) -> Result<Packet<'frame>> {
         let packet = match repr {
-            NdiscRepr::NeighborAdvert { lladdr, target_addr, flags } => {
+            NdiscRepr::NeighborAdvert { target_addr, flags, options } => {
                 let ip_addr = ip_repr.src_addr.into();
-                match lladdr {
+                match options.slladdr() {
                     Some(lladdr) if lladdr.is_unicast() && target_addr.is_unicast() => {
                         if flags.contains(NdiscNeighborFlags::OVERRIDE) {
                             self.neighbor_cache.fill(ip_addr, lladdr, timestamp)
@@ -801,18 +801,19 @@ impl<'b, 'c, 'e> InterfaceInner<'b, 'c, 'e> {
                 }
                 Ok(Packet::None)
             }
-            NdiscRepr::NeighborSolicit { target_addr, lladdr, .. } => {
-                match lladdr {
+            NdiscRepr::NeighborSolicit { target_addr, options, .. } => {
+                match options.slladdr() {
                     Some(lladdr) if lladdr.is_unicast() && target_addr.is_unicast() => {
                         self.neighbor_cache.fill(ip_repr.src_addr.into(), lladdr, timestamp)
                     },
                     _ => (),
                 }
                 if self.has_solicited_node(ip_repr.dst_addr) && self.has_ip_addr(target_addr) {
+                    let addr_opt = [NdiscOptionRepr::SourceLinkLayerAddr(self.ethernet_addr)];
                     let advert = Icmpv6Repr::Ndisc(NdiscRepr::NeighborAdvert {
                         flags: NdiscNeighborFlags::SOLICITED,
                         target_addr: target_addr,
-                        lladdr: Some(self.ethernet_addr)
+                        options: NdiscOptionsRepr::new(addr_opt.iter()),
                     });
                     let ip_repr = Ipv6Repr {
                         src_addr: target_addr,
@@ -1214,9 +1215,10 @@ impl<'b, 'c, 'e> InterfaceInner<'b, 'c, 'e> {
 
                 let checksum_caps = self.device_capabilities.checksum.clone();
 
+                let addr_opt = NdiscOptionRepr::SourceLinkLayerAddr(self.ethernet_addr);
                 let solicit = Icmpv6Repr::Ndisc(NdiscRepr::NeighborSolicit {
                     target_addr: src_addr,
-                    lladdr: Some(self.ethernet_addr),
+                    options: NdiscOptionsRepr::new([addr_opt].iter()),
                 });
 
                 let ip_repr = IpRepr::Ipv6(Ipv6Repr {
@@ -1293,7 +1295,7 @@ mod test {
     #[cfg(feature = "proto-ipv6")]
     use wire::{Icmpv6Packet, Icmpv6Repr, Icmpv6ParamProblem};
     #[cfg(feature = "proto-ipv6")]
-    use wire::{NdiscNeighborFlags, NdiscRepr};
+    use wire::{NdiscNeighborFlags, NdiscRepr, NdiscOptionRepr, NdiscOptionsRepr};
 
     use super::Packet;
 
@@ -1685,10 +1687,11 @@ mod test {
         let remote_ip_addr = Ipv6Address::new(0xfdbe, 0, 0, 0, 0, 0, 0, 2);
         let local_hw_addr = EthernetAddress([0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
         let remote_hw_addr = EthernetAddress([0x52, 0x54, 0x00, 0x00, 0x00, 0x00]);
+        let addr_opt = [NdiscOptionRepr::SourceLinkLayerAddr(remote_hw_addr)];
 
         let solicit = Icmpv6Repr::Ndisc(NdiscRepr::NeighborSolicit {
             target_addr: local_ip_addr,
-            lladdr: Some(remote_hw_addr),
+            options: NdiscOptionsRepr::new(addr_opt.iter()),
         });
         let ip_repr = IpRepr::Ipv6(Ipv6Repr {
             src_addr: remote_ip_addr,
@@ -1709,10 +1712,11 @@ mod test {
                          &ChecksumCapabilities::default());
         }
 
+        let addr_opt = [NdiscOptionRepr::SourceLinkLayerAddr(local_hw_addr)];
         let icmpv6_expected = Icmpv6Repr::Ndisc(NdiscRepr::NeighborAdvert {
             flags: NdiscNeighborFlags::SOLICITED,
             target_addr: local_ip_addr,
-            lladdr: Some(local_hw_addr)
+            options: NdiscOptionsRepr::new(addr_opt.iter()),
         });
 
         let ipv6_expected = Ipv6Repr {

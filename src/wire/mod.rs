@@ -103,6 +103,8 @@ mod igmp;
 mod ndisc;
 #[cfg(feature = "proto-ipv6")]
 mod ndiscoption;
+#[cfg(feature = "proto-ipv6")]
+mod ndiscoptions;
 mod udp;
 mod tcp;
 #[cfg(feature = "proto-ipv4")]
@@ -185,6 +187,11 @@ pub use self::icmpv6::{RouterFlags as NdiscRouterFlags,
 
 #[cfg(feature = "proto-ipv6")]
 pub use self::ndisc::Repr as NdiscRepr;
+
+#[cfg(feature = "proto-ipv6")]
+pub use self::ndiscoptions::{NdiscOptions,
+                             Repr as NdiscOptionsRepr,
+                             MAX_NDISC_OPTIONS};
 
 #[cfg(feature = "proto-ipv6")]
 pub use self::ndiscoption::{NdiscOption,
